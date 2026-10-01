@@ -239,6 +239,20 @@ public:
                                        (double) TIMING_TOLERANCE);
         }
 
+        beginTest ("A note placed a 16th early lets the first word lead into its beat");
+        {
+            Scenario scenario;
+            scenario.lengthPpq = 9.0;
+            scenario.notes = { { 3.75, FIRST_SLOT_NOTE + SLOT_C1 } };
+            const auto result = renderScenario (*processor, scenario);
+            const auto onsets = onsetsOf (result, RIGHT);
+
+            expectEquals ((int) onsets.size(), 4);
+            if (! onsets.empty())
+                expectWithinAbsoluteError ((double) onsets[0], expectedWordOnset (result, 4.0, 3.75, fakeTake ("Four", 0.5f), 120.0),
+                                           (double) TIMING_TOLERANCE);
+        }
+
         beginTest ("A meter change during a cue counts the bar as the host plays it");
         {
             // Name bar in 4/4, then a 2/4 bar before the section at ppq 10.
