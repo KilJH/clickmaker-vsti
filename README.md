@@ -40,6 +40,52 @@ ctest --test-dir build --output-on-failure
 build/ClickMakerTests_artefacts/Release/ClickMakerTests --tts-smoke   # 실제 음성으로 렌더 → build/test-output/*.wav
 ```
 
+## 배포 (설치 파일, GitHub Release)
+
+`v1.2.3` 같은 태그를 푸시하면 GitHub Actions가 다음을 합니다.
+
+1. Apple Silicon·Intel 겸용으로 빌드
+2. 테스트
+3. 설치 프로그램(`.pkg`), zip, SHA-256 목록을 GitHub Release에 올림
+
+태그의 숫자가 플러그인 버전이 됩니다. Logic은 이 버전이 바뀌면 플러그인을 다시 검사합니다.
+
+```sh
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+- Actions 탭 → Release → Run workflow로 실행하면 릴리스는 만들지 않고, 같은 파일을 워크플로 아티팩트로 받을 수 있습니다.
+- 로컬에서 설치 파일 만들기: 빌드한 뒤 `scripts/package-macos.sh 0.1.0`을 실행하면 `dist/`에 생깁니다.
+
+### 서명과 공증 (선택)
+
+아래 시크릿이 없으면 ad-hoc 서명으로 배포되고, 받는 사람이 처음 한 번 Gatekeeper 경고를 넘겨야 합니다(릴리스 노트에 방법이 자동으로 들어감).
+Apple Developer Program(연 $99)에 가입한 뒤 시크릿을 넣으면, 다음 릴리스부터 Developer ID 서명과 공증이 자동으로 됩니다.
+
+| 시크릿 | 내용 |
+|---|---|
+| `MACOS_APPLICATION_P12` | Developer ID Application 인증서 .p12 (base64) |
+| `MACOS_INSTALLER_P12` | Developer ID Installer 인증서 .p12 (base64) |
+| `MACOS_P12_PASSWORD` | 두 .p12를 내보낼 때 쓴 비밀번호 |
+| `NOTARY_API_KEY` | App Store Connect API 키 파일(.p8) 내용 |
+| `NOTARY_API_KEY_ID` | 그 키의 Key ID |
+| `NOTARY_API_ISSUER` | Issuer ID |
+
+```sh
+gh secret set MACOS_APPLICATION_P12 < <(base64 -i DeveloperIDApplication.p12)
+gh secret set MACOS_INSTALLER_P12 < <(base64 -i DeveloperIDInstaller.p12)
+gh secret set MACOS_P12_PASSWORD
+gh secret set NOTARY_API_KEY < AuthKey_XXXXXXXXXX.p8
+gh secret set NOTARY_API_KEY_ID
+gh secret set NOTARY_API_ISSUER
+```
+
+- **인증서:** Xcode → 설정 → Accounts → Manage Certificates에서 Developer ID Application과 Developer ID Installer를 만든 뒤, 키체인 접근에서 각각 .p12로 내보냅니다.
+- **API 키:** App Store Connect → 사용자 및 액세스 → 통합 → App Store Connect API에서 팀 키를 만듭니다(Developer 역할 이상).
+
+빌드한 바이너리를 공개 배포하기 전에 JUCE 라이선스를 정해야 합니다. 이 저장소를 AGPLv3로 공개(LICENSE 파일 추가)하거나, JUCE Starter 라이선스(연 매출 $20k 이하 무료)를 쓰세요.
+
 ## Logic에서 확인할 것
 
 1. 트랙을 선택했을 때와 안 했을 때 모두 클릭이 끊기지 않는지, 박자표 4/4 → 6/8 → 7/8 변화에서 강세가 맞는지

@@ -4,9 +4,12 @@ cmake_minimum_required(VERSION 3.25)
 set(CMAKE_OSX_DEPLOYMENT_TARGET "14.0" CACHE STRING "Minimum macOS version")
 set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "Target architectures")
 
+# Release builds pass the tag's version; hosts compare it to decide whether to rescan the plugin.
+set(CLICKMAKER_VERSION "0.1.0" CACHE STRING "Plugin version, major.minor.patch")
+
 # No OBJC/OBJCXX languages: .mm files then build as CXX, so JUCE's hidden-visibility preset applies to
 # its Objective-C++ modules and the plugin exports no weak symbols for other JUCE plugins to bind to.
-project(ClickMaker VERSION 0.1.0 LANGUAGES C CXX)
+project(ClickMaker VERSION ${CLICKMAKER_VERSION} LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
