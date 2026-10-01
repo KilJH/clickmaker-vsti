@@ -104,6 +104,7 @@ public:
             owner.sync.edit().slots[(size_t) slot].name = cleanText (name.getText());
             owner.sync.push();
         };
+        theme::releaseFocusOnReturn (name);
         addAndMakeVisible (name);
 
         mode.addItemList ({ theme::utf8 ("기본"), theme::utf8 ("이름만"), "4", "8" }, 1);
@@ -222,6 +223,7 @@ CuePanel::CuePanel (ClickMakerProcessor& processorToUse, SettingsSync& settingsS
     countWords.setInputRestrictions (MAX_COUNT_WORDS_LENGTH);
     countWords.setTextToShowWhenEmpty (utf8 ("One, Two, Three, Four ..."), DIM_TEXT);
     countWords.onTextChange = [this] { countWordsEdited(); };
+    releaseFocusOnReturn (countWords);
     englishWords.onClick = [this] { useCountWords (englishCountWords()); };
     koreanWords.setButtonText (utf8 ("한"));
     koreanWords.onClick = [this] { useCountWords (koreanCountWords()); };

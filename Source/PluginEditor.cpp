@@ -126,6 +126,7 @@ ClickMakerEditor::ClickMakerEditor (ClickMakerProcessor& processorToUse)
         sync.push();
         showGroups();
     };
+    releaseFocusOnReturn (groups);
     addAndMakeVisible (groups);
     caption (groupsHint, "");
 

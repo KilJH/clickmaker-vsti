@@ -97,5 +97,6 @@ gh secret set NOTARY_API_ISSUER
 5. 저장 후 다시 열었을 때, Bounce in Place로 내보냈을 때 큐가 바로 정상으로 나오는지
 6. 섹션 앞에 2/4 마디가 있을 때 카운트가 `2 1`로 줄어 섹션 첫 박 전에 끝나는지
 7. 사이클 시작점에 찍은 큐가 반복할 때마다 나오는지 (Logic이 사이클 끝에서 처리 블록을 나누지 않으면 빠질 수 있음)
+8. 이름·숫자 칸에 입력하고 Return을 누른 뒤 Space로 Logic 재생·정지가 되는지
 
 JUCE는 빌드할 때 내려받으며 JUCE 라이선스(AGPLv3 또는 JUCE EULA)를 따릅니다.

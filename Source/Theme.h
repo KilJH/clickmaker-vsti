@@ -87,6 +87,13 @@ inline void setupCaption (juce::Label& label, const juce::String& text)
     label.setJustificationType (juce::Justification::centredLeft);
 }
 
+// Return or Escape hands the keys back to the host, so Space starts and stops the transport again.
+inline void releaseFocusOnReturn (juce::TextEditor& editor)
+{
+    editor.onReturnKey = [&editor] { editor.giveAwayKeyboardFocus(); };
+    editor.onEscapeKey = editor.onReturnKey;
+}
+
 inline void setupSlider (juce::Slider& slider, juce::Colour track, const juce::String& suffix = {})
 {
     // The value box copies these colours when it is created, so set them on the slider first.
