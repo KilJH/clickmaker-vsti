@@ -11,6 +11,19 @@ namespace
 constexpr double FIT_RATIO = 0.9;               // leave a little air before the next word
 constexpr double MAX_ONSET_LEAD_SECONDS = 0.15;
 constexpr double CHOKE_SECONDS = 0.005;
+constexpr double PPQ_EPSILON = 1.0e-6;
+
+bool sameBeats (const BarLayout& a, const BarLayout& b)
+{
+    if (a.numBeats != b.numBeats || std::abs (a.barPpq - b.barPpq) > PPQ_EPSILON)
+        return false;
+
+    for (int i = 0; i < a.numBeats; ++i)
+        if (std::abs (a.beatPpq[(size_t) i] - b.beatPpq[(size_t) i]) > PPQ_EPSILON)
+            return false;
+
+    return true;
+}
 } // namespace
 
 CueSequence buildCueSequence (const BarLayout& bar, int slot, const CueShape& shape)
@@ -94,19 +107,77 @@ void CueEngine::prepare (double newSampleRate)
     slot = NO_SLOT;
 }
 
-void CueEngine::trigger (int newSlot, double notePpq, const BlockTime& time, const BarLayout& bar, const CueShape& shape)
+void CueEngine::trigger (int newSlot, double notePpq, const BlockTime& time, const BarLayout& bar, const CueShape& newShape)
 {
     cancel();
 
     const double start = snapToNearestBeat (notePpq, time.barStartPpq, bar);
-    schedule = buildCueSequence (bar, newSlot, shape);
+    schedule = buildCueSequence (bar, newSlot, newShape);
 
     for (int i = 0; i < schedule.size; ++i)
         schedule.events[(size_t) i].ppq += start;
 
+    const double barsIn = (start - time.barStartPpq) / bar.barPpq;
     nextEvent = 0;
     earliestPpq = notePpq;
     slot = newSlot;
+    shape = newShape;
+    layout = bar;
+    barStart = start;
+    barIndex = 0;
+    onBarLines = std::abs (barsIn - std::round (barsIn)) * bar.barPpq < PPQ_EPSILON;
+}
+
+void CueEngine::followBar (const BlockTime& time, const BarLayout& bar)
+{
+    if (! onBarLines || nextEvent >= schedule.size)
+        return;
+
+    // Meters change only at bar lines, so each bar of the cue starts where the planned one ends.
+    while (time.barStartPpq >= barStart + layout.barPpq - PPQ_EPSILON)
+    {
+        barStart += layout.barPpq;
+        ++barIndex;
+    }
+
+    // The plan assumed every bar of the cue looks like the first; a 2/4 bar before a chorus does not.
+    if (time.barStartPpq >= barStart - PPQ_EPSILON && ! sameBeats (bar, layout))
+        replan (time, bar);
+}
+
+void CueEngine::replan (const BlockTime& time, const BarLayout& bar)
+{
+    const auto fresh = buildCueSequence (bar, slot, shape);
+    const double offset = barStart - barIndex * bar.barPpq;
+    const auto fired = nextEvent > 0 ? std::optional (schedule.events[(size_t) nextEvent - 1]) : std::nullopt;
+    CueSequence rest;
+
+    for (int i = 0; i < fresh.size; ++i)
+    {
+        auto event = fresh.events[(size_t) i];
+        event.ppq += offset;
+
+        if (event.ppq < barStart - PPQ_EPSILON)
+            continue; // an earlier bar of the cue
+
+        // Words start ahead of their beat, so the old plan may already have started this one.
+        if (fired.has_value() && std::abs (fired->ppq - event.ppq) < PPQ_EPSILON)
+        {
+            const bool replacesWrongWord = fired->wordId != event.wordId && time.ppqStart < event.ppq + event.lengthPpq;
+            if (! replacesWrongWord)
+                continue;
+        }
+        else if (event.ppq < time.ppqStart - PPQ_EPSILON)
+        {
+            continue; // its beat has passed
+        }
+
+        rest.push (event);
+    }
+
+    schedule = rest;
+    nextEvent = 0;
+    layout = bar;
 }
 
 void CueEngine::cancel()

@@ -12,6 +12,7 @@ constexpr float ONSET_THRESHOLD = 1.0e-3f;
 constexpr int ONSET_GAP = 480;          // 10 ms of silence separates two sounds
 constexpr int TIMING_TOLERANCE = 5;     // samples, about 0.1 ms
 constexpr int PITCH_WINDOW = 384;       // 8 ms
+constexpr int VOWEL_WINDOW = 960;       // 20 ms, enough cycles to tell the fake numbers apart
 constexpr double MAX_ONSET_LEAD_SECONDS = 0.15;
 constexpr int SLOT_C1 = 0;
 constexpr int SLOT_F1 = 5;             // "Pre-Chorus" by default
@@ -38,6 +39,13 @@ std::vector<int> onsetsOf (const RenderResult& result, int channel)
 double pitchAt (const RenderResult& result, int channel, int sample)
 {
     return estimateFrequency (result.audio.getReadPointer (channel, sample), PITCH_WINDOW, TEST_SAMPLE_RATE);
+}
+
+// The cue's pitch shortly after a beat, which names the fake word sounding there.
+double cuePitchAfter (const RenderResult& result, double ppq, double seconds)
+{
+    const auto sample = (int) std::round (result.sampleAtPpq (ppq) + seconds * TEST_SAMPLE_RATE);
+    return estimateFrequency (result.audio.getReadPointer (RIGHT, sample), VOWEL_WINDOW, TEST_SAMPLE_RATE);
 }
 
 double firstAudibleSeconds (const WordTake& take)
@@ -229,6 +237,28 @@ public:
                                        (double) TIMING_TOLERANCE);
             expectWithinAbsoluteError ((double) onsets[1], expectedWordOnset (result, 5.0, 4.02, fakeTake ("Three", 0.5f), 120.0),
                                        (double) TIMING_TOLERANCE);
+        }
+
+        beginTest ("A meter change during a cue counts the bar as the host plays it");
+        {
+            // Name bar in 4/4, then a 2/4 bar before the section at ppq 10.
+            Scenario scenario;
+            scenario.lengthPpq = 14.0;
+            scenario.meters = { { 0.0, { 4, 4 } }, { 8.0, { 2, 4 } }, { 10.0, { 4, 4 } } };
+            scenario.notes = { { 4.0, FIRST_SLOT_NOTE + SLOT_F1 } };
+
+            const auto down = renderScenario (*processor, scenario);
+            expectWithinAbsoluteError (cuePitchAfter (down, 8.0, 0.06), fakeFrequencyFor ("Two"), 40.0);
+            expectWithinAbsoluteError (cuePitchAfter (down, 9.0, 0.02), fakeFrequencyFor ("One"), 40.0);
+            expect (! hasSoundAfter (down, RIGHT, (int) down.sampleAtPpq (10.0)), "the count ran into the section");
+
+            // Counting up, the word already started for the bar is still right and must not restart.
+            setParameter (*processor, param::COUNT_DIRECTION, 1.0f);
+            const auto up = renderScenario (*processor, scenario);
+            expectWithinAbsoluteError (cuePitchAfter (up, 8.0, 0.01), fakeFrequencyFor ("One"), 40.0);
+            expectWithinAbsoluteError (cuePitchAfter (up, 9.0, 0.02), fakeFrequencyFor ("Two"), 40.0);
+            expect (! hasSoundAfter (up, RIGHT, (int) up.sampleAtPpq (10.0)), "the count ran into the section");
+            setParameter (*processor, param::COUNT_DIRECTION, 0.0f);
         }
 
         beginTest ("A fast tempo plays a faster take");

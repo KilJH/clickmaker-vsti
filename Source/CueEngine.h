@@ -52,6 +52,7 @@ class CueEngine
 public:
     void prepare (double sampleRate);
     void trigger (int slot, double notePpq, const BlockTime&, const BarLayout&, const CueShape&);
+    void followBar (const BlockTime&, const BarLayout&); // once per block, before render
     void cancel();
     void render (float* bus, int from, int to, const BlockTime&, const EngineConfig*);
 
@@ -69,6 +70,7 @@ private:
         float fadeStep = 0.0f;
     };
 
+    void replan (const BlockTime&, const BarLayout&);
     void startWord (const WordTake&);
     void renderVoices (float* bus, int from, int to);
     static void renderVoice (WordVoice&, float* bus, int from, int to);
@@ -79,6 +81,11 @@ private:
     int nextEvent = 0;
     double earliestPpq = 0.0;
     int slot = NO_SLOT;
+    CueShape shape;
+    BarLayout layout;        // the bar the remaining events were planned with
+    double barStart = 0.0;   // start of the cue's bar the playhead is in, or heading for
+    int barIndex = 0;        // which bar of the cue that is
+    bool onBarLines = false; // the cue starts on a downbeat, so its bars are the host's bars
     std::array<WordVoice, 2> voices; // [0] current word, [1] the word being choked
 };
 

@@ -181,6 +181,7 @@ void ClickMakerProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
 
     const auto groups = config != nullptr ? std::span<const GroupPattern> (config->groups) : std::span<const GroupPattern>();
     const auto bar = makeBarLayout (time.meter, { settings.compound, groups });
+    cue.followBar (time, bar);
 
     if (previewSlot != NO_SLOT && time.isPreview)
         cue.trigger (previewSlot, time.ppqStart, time, bar, shapeFor (previewSlot, config, settings));
