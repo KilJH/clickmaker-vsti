@@ -63,6 +63,17 @@ public:
     {
         beginTest ("The installed component renders exactly like the processor");
 
+        // Synthetic words travel inside the state, so neither side needs speech synthesis.
+        auto reference = std::make_unique<ClickMakerProcessor> (fakeSpeech);
+        expect (waitUntil ([&] { return reference->speechStatus().complete; }, WORKER_TIMEOUT_MS));
+        setParameter (*reference, param::CLICK_PAN, -1.0f);
+        setParameter (*reference, param::CUE_PAN, 1.0f);
+        setParameter (*reference, param::CLICK_GRID, 1.0f);
+        setParameter (*reference, param::CLICK_SOUND, 1.0f);
+
+        juce::MemoryBlock state;
+        reference->getStateInformation (state);
+
         juce::AudioUnitPluginFormat format;
         juce::OwnedArray<juce::PluginDescription> found;
         format.findAllTypesForFile (found, CLICKMAKER_AU_IDENTIFIER);
@@ -78,16 +89,7 @@ public:
         if (instance == nullptr)
             return;
 
-        // Synthetic words travel inside the state, so neither side needs speech synthesis.
-        auto reference = std::make_unique<ClickMakerProcessor> (fakeSpeech);
-        expect (waitUntil ([&] { return reference->speechStatus().complete; }, WORKER_TIMEOUT_MS));
-        setParameter (*reference, param::CLICK_PAN, -1.0f);
-        setParameter (*reference, param::CUE_PAN, 1.0f);
-        setParameter (*reference, param::CLICK_GRID, 1.0f);
-        setParameter (*reference, param::CLICK_SOUND, 1.0f);
-
-        juce::MemoryBlock state;
-        reference->getStateInformation (state);
+        // Restore straight away, as a host does when it opens a project.
         const auto classInfo = wrapInClassInfo (*instance, state);
         instance->setStateInformation (classInfo.getData(), (int) classInfo.getSize());
 

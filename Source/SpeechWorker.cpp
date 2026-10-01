@@ -330,7 +330,7 @@ void SpeechWorker::run()
             continue;
         }
 
-        auto outcome = renderTake (*job, snapshot.voice);
+        auto outcome = renderTake (*job, snapshot.voice, revisionNow);
 
         if (threadShouldExit())
             break;
@@ -338,6 +338,11 @@ void SpeechWorker::run()
         bool retryLater = false;
         {
             const std::scoped_lock lock (mutex);
+
+            // An edit or a restored state interrupted the render; publish that first.
+            if (! outcome.take.has_value() && settingsRevision != revisionNow)
+                continue;
+
             auto& entry = cache[job->key];
 
             if (outcome.take.has_value())
@@ -368,10 +373,16 @@ void SpeechWorker::run()
     }
 }
 
-SpeechWorker::RenderOutcome SpeechWorker::renderTake (const Job& job, const VoiceChoice& voice)
+SpeechWorker::RenderOutcome SpeechWorker::renderTake (const Job& job, const VoiceChoice& voice, std::uint64_t revisionAtStart)
 {
     const float rate = std::min (1.0f, (float) job.key.ratePercent / 100.0f + TAKE_RATE_OFFSETS[(size_t) job.step]);
-    const auto abort = [this] { return threadShouldExit(); };
+
+    // A render can block for seconds while the host's main thread is busy; settings must not wait for it.
+    const auto abort = [this, revisionAtStart]
+    {
+        const std::scoped_lock lock (mutex);
+        return threadShouldExit() || settingsRevision != revisionAtStart;
+    };
 
     const auto render = [&] (const SpeechRequest& request) -> RenderOutcome
     {
@@ -386,7 +397,7 @@ SpeechWorker::RenderOutcome SpeechWorker::renderTake (const Job& job, const Voic
     auto outcome = render ({ job.key.text, voice.id, voice.name, voice.language, rate });
 
     // A voice that cannot read Hangul renders silence rather than an error.
-    if (! outcome.take.has_value() && ! outcome.retryable && containsHangul (job.key.text) && ! threadShouldExit())
+    if (! outcome.take.has_value() && ! outcome.retryable && containsHangul (job.key.text) && ! abort())
         outcome = render ({ job.key.text, {}, {}, KOREAN_LANGUAGE, rate });
 
     return outcome;

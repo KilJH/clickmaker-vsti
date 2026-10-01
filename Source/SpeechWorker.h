@@ -99,7 +99,7 @@ private:
 
     void run() override;
     void publish();
-    RenderOutcome renderTake (const Job&, const VoiceChoice&);
+    RenderOutcome renderTake (const Job&, const VoiceChoice&, std::uint64_t revisionAtStart);
     std::optional<Job> nextJob() const;
     static std::vector<RequiredWord> requiredWords (const Settings&);
 

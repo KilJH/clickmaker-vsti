@@ -313,6 +313,31 @@ public:
             expectEquals (worker.status().wordsFailed, 0);
         }
 
+        beginTest ("An edit interrupts a slow render, so new settings are published at once");
+        {
+            ConfigHandoff handoff;
+            SpeechWorker worker (handoff, [] (const SpeechRequest&, const AbortCheck& abort) -> std::optional<RenderedSpeech>
+            {
+                while (! abort())
+                    juce::Thread::sleep (5); // a synthesizer that never answers, like one stuck behind a busy main thread
+
+                return std::nullopt;
+            });
+
+            waitUntil ([] { return false; }, 900); // past the debounce, so the worker is inside a render
+
+            Settings settings;
+            settings.slots[3].name = "Bridge";
+            worker.setSettings (settings);
+
+            expect (waitUntil ([&]
+            {
+                handoff.adoptPending();
+                const auto* config = handoff.current();
+                return config != nullptr && config->namedSlots == (1u << 3);
+            }, 300));
+        }
+
         beginTest ("Restored words are used as they are, without rendering");
         {
             ConfigHandoff sourceHandoff;
