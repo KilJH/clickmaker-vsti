@@ -1,3 +1,7 @@
 build*/
 dist/
 .DS_Store
+
+# Signing material belongs in GitHub secrets, never in the repository.
+*.p12
+*.p8

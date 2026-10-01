@@ -68,6 +68,10 @@ jobs:
           security set-keychain-settings -lut 21600 "$KEYCHAIN"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
 
+          # codesign needs the intermediate to build the chain; runner images do not always have it.
+          curl -fsSL https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer -o "$RUNNER_TEMP/DeveloperIDG2CA.cer"
+          security import "$RUNNER_TEMP/DeveloperIDG2CA.cer" -k "$KEYCHAIN"
+
           echo "$APPLICATION_P12" | base64 --decode > "$RUNNER_TEMP/application.p12"
           echo "$INSTALLER_P12" | base64 --decode > "$RUNNER_TEMP/installer.p12"
 
