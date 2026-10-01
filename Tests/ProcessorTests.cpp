@@ -157,7 +157,7 @@ public:
 
             setParameter (*processor, param::CLICK_GRID, 0.0f);
             setParameter (*processor, param::SWING_ON, 0.0f);
-            setParameter (*processor, param::CLICK_DECAY, 40.0f);
+            setParameter (*processor, param::CLICK_DECAY, 80.0f);
         }
     }
 };

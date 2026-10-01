@@ -57,7 +57,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
     };
 
     toggle (param::CLICK_ON, "Click On", true);
-    ranged (param::CLICK_LEVEL, "Click Level", { -48.0f, 6.0f, 0.1f }, -6.0f, "dB");
+    ranged (param::CLICK_LEVEL, "Click Level", { -48.0f, 6.0f, 0.1f }, 0.0f, "dB");
     pan (param::CLICK_PAN, "Click Pan");
     choice (param::CLICK_SOUND, "Click Sound", { "Beep", "Wood", "Cowbell" }, 0);
     choice (param::CLICK_GRID, "Click Grid", { "Beat", "1/8", "1/8T", "1/16", "1/16T" }, 0);
@@ -71,9 +71,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
     ranged (param::ACCENT_GAIN, "Accent Gain", { -24.0f, 0.0f, 0.1f }, 0.0f, "dB");
     ranged (param::BEAT_GAIN, "Beat Gain", { -24.0f, 0.0f, 0.1f }, -3.0f, "dB");
     ranged (param::SUB_GAIN, "Sub Gain", { -24.0f, 0.0f, 0.1f }, -12.0f, "dB");
-    ranged (param::CLICK_DECAY, "Click Decay", { 5.0f, 200.0f, 1.0f, 0.5f }, 40.0f, "ms");
+    ranged (param::CLICK_DECAY, "Click Decay", { 5.0f, 200.0f, 1.0f, 0.5f }, 80.0f, "ms");
     toggle (param::CUE_ON, "Cue On", true);
-    ranged (param::CUE_LEVEL, "Cue Level", { -48.0f, 6.0f, 0.1f }, -3.0f, "dB");
+    ranged (param::CUE_LEVEL, "Cue Level", { -48.0f, 6.0f, 0.1f }, -6.0f, "dB");
     pan (param::CUE_PAN, "Cue Pan");
     choice (param::COUNT_LENGTH, "Count Length", { "4 (1 bar)", "8 (2 bars)" }, 0);
     choice (param::COUNT_DIRECTION, "Count Direction", { "Down 4 3 2 1", "Up 1 2 3 4" }, 0);
