@@ -158,6 +158,7 @@ ClickMakerEditor::ClickMakerEditor (ClickMakerProcessor& processorToUse)
     showGroups();
     showSpeechStatus();
     setSize (EDITOR_WIDTH, EDITOR_HEIGHT);
+    addMouseListener (this, true);
     startTimerHz (DISPLAY_RATE_HZ);
 }
 
@@ -190,6 +191,18 @@ void ClickMakerEditor::resized()
     area.removeFromLeft (theme::GAP + 4);
     cuePanel.setBounds (area);
     layoutClickPanel (clickPanelBounds);
+}
+
+void ClickMakerEditor::mouseDown (const juce::MouseEvent& event)
+{
+    // A clicked button keeps Return and a clicked combo box keeps the arrow keys, which Logic needs to go to
+    // the start and to change tracks. JUCE has already moved the focus by now, so only text fields keep it.
+    const auto* clicked = event.eventComponent;
+    const bool inTextField = dynamic_cast<const juce::TextEditor*> (clicked) != nullptr
+                          || clicked->findParentComponentOfClass<juce::TextEditor>() != nullptr;
+
+    if (auto* focused = getCurrentlyFocusedComponent(); ! inTextField && focused != nullptr && isParentOf (focused))
+        focused->giveAwayKeyboardFocus();
 }
 
 void ClickMakerEditor::layoutClickPanel (juce::Rectangle<int> bounds)
