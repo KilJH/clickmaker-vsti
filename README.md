@@ -90,8 +90,6 @@ gh secret set NOTARY_API_ISSUER
 - **인증서:** Xcode → 설정 → Accounts → Manage Certificates에서 Developer ID Application과 Developer ID Installer를 만든 뒤, 키체인 접근에서 각각 .p12로 내보냅니다.
 - **API 키:** App Store Connect → 사용자 및 액세스 → 통합 → App Store Connect API에서 팀 키를 만듭니다(Developer 역할 이상).
 
-빌드한 바이너리를 공개 배포하기 전에 JUCE 라이선스를 정해야 합니다. 이 저장소를 AGPLv3로 공개(LICENSE 파일 추가)하거나, JUCE Starter 라이선스(연 매출 $20k 이하 무료)를 쓰세요.
-
 ## Logic에서 확인할 것
 
 1. 트랙을 선택했을 때와 안 했을 때 모두 클릭이 끊기지 않는지, 박자표 4/4 → 6/8 → 7/8 변화에서 강세가 맞는지
@@ -106,4 +104,10 @@ gh secret set NOTARY_API_ISSUER
 10. 재생 중 트랙을 선택하고 마디 중간에 큐 건반을 누르면 다음 마디 첫 박부터 카운트가 나오는지
 11. 강세·박·쪼갬 볼륨을 Off로 두면 그 소리만 꺼지고, Logic 오토메이션에도 Off로 보이는지
 
-JUCE는 빌드할 때 내려받으며 JUCE 라이선스(AGPLv3 또는 JUCE EULA)를 따릅니다.
+## 라이선스
+
+Copyright (C) 2026 KilJH
+
+ClickMaker는 [GNU Affero General Public License v3.0](LICENSE)으로 배포합니다. 누구나 쓰고 고치고 다시 배포할 수 있지만, 고친 것을 배포할 때는 같은 라이선스로 소스도 공개해야 합니다.
+
+JUCE는 빌드할 때 내려받으며, 이 프로젝트는 JUCE를 AGPLv3 조건으로 씁니다.
