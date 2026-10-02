@@ -108,15 +108,16 @@ public:
             expectEquals (patterns[1].total(), 5);
         }
 
-        beginTest ("Snapping picks the nearest beat, preferring the later one on a tie");
+        beginTest ("A cue starts on the next bar line, or on its own bar when the note is at most a 16th late");
         {
-            const auto bar = makeBarLayout ({ 4, 4 }, {});
-            expectEquals (snapToNearestBeat (0.1, 0.0, bar), 0.0);
-            expectEquals (snapToNearestBeat (0.6, 0.0, bar), 1.0);
-            expectEquals (snapToNearestBeat (3.6, 0.0, bar), 4.0);
-            expectEquals (snapToNearestBeat (1.5, 0.0, bar), 2.0);
-            expectEquals (snapToNearestBeat (-0.4, 0.0, bar), 0.0);
-            expectEquals (snapToNearestBeat (5.2, 4.0, bar), 5.0);
+            expectEquals (cueStartPpq (4.0, 4.0, 4.0), 4.0);   // on the downbeat
+            expectEquals (cueStartPpq (3.75, 0.0, 4.0), 4.0);  // a 16th early
+            expectEquals (cueStartPpq (1.0, 0.0, 4.0), 4.0);   // anywhere in the bar before
+            expectEquals (cueStartPpq (4.25, 4.0, 4.0), 4.0);  // a 16th late keeps its bar
+            expectEquals (cueStartPpq (4.3, 4.0, 4.0), 8.0);   // later waits for the next bar
+            expectEquals (cueStartPpq (6.5, 4.0, 4.0), 8.0);   // a pad pressed live mid-bar
+            expectEquals (cueStartPpq (9.9, 8.0, 2.0), 10.0);  // a 2/4 bar
+            expectEquals (cueStartPpq (-0.1, -4.0, 4.0), 0.0); // pre-roll
         }
 
         beginTest ("The clock falls back to the bar grid when the host gives no bar start");

@@ -253,6 +253,22 @@ public:
                                            (double) TIMING_TOLERANCE);
         }
 
+        beginTest ("A note pressed mid-bar, as on a live pad, counts from the next bar");
+        {
+            Scenario scenario;
+            scenario.lengthPpq = 13.0;
+            scenario.notes = { { 5.5, FIRST_SLOT_NOTE + SLOT_C1 } };
+            const auto result = renderScenario (*processor, scenario);
+            const auto onsets = onsetsOf (result, RIGHT);
+            const std::array<const char*, 4> words { "Four", "Three", "Two", "One" };
+
+            expectEquals ((int) onsets.size(), 4);
+            for (size_t k = 0; k < words.size() && k < onsets.size(); ++k)
+                expectWithinAbsoluteError ((double) onsets[k],
+                                           expectedWordOnset (result, 8.0 + (double) k, 5.5, fakeTake (words[k], 0.5f), 120.0),
+                                           (double) TIMING_TOLERANCE);
+        }
+
         beginTest ("A meter change during a cue counts the bar as the host plays it");
         {
             // Name bar in 4/4, then a 2/4 bar before the section at ppq 10.

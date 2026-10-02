@@ -48,7 +48,10 @@ struct BarLayout
 };
 
 BarLayout makeBarLayout (Meter, const BeatOptions&);
-double snapToNearestBeat (double ppq, double barStartPpq, const BarLayout&);
+
+// The bar line a cue starts on: the next one after its note, or the note's own bar when the note is at most
+// a 16th late, so a note a little early or late keeps its bar and a pad pressed mid-bar waits for the next.
+double cueStartPpq (double notePpq, double barStartPpq, double barPpq);
 
 struct BlockTime
 {

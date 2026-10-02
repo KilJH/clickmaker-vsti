@@ -86,7 +86,6 @@ private:
     BarLayout layout;        // the bar the remaining events were planned with
     double barStart = 0.0;   // start of the cue's bar the playhead is in, or heading for
     int barIndex = 0;        // which bar of the cue that is
-    bool onBarLines = false; // the cue starts on a downbeat, so its bars are the host's bars
     std::array<WordVoice, 2> voices; // [0] current word, [1] the word being choked
 };
 

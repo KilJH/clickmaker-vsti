@@ -130,13 +130,12 @@ void CueEngine::trigger (int newSlot, double notePpq, const BlockTime& time, con
 {
     cancel();
 
-    const double start = snapToNearestBeat (notePpq, time.barStartPpq, bar);
+    const double start = cueStartPpq (notePpq, time.barStartPpq, bar.barPpq);
     schedule = buildCueSequence (bar, newSlot, newShape);
 
     for (int i = 0; i < schedule.size; ++i)
         schedule.events[(size_t) i].ppq += start;
 
-    const double barsIn = (start - time.barStartPpq) / bar.barPpq;
     nextEvent = 0;
     earliestPpq = notePpq;
     slot = newSlot;
@@ -144,12 +143,11 @@ void CueEngine::trigger (int newSlot, double notePpq, const BlockTime& time, con
     layout = bar;
     barStart = start;
     barIndex = 0;
-    onBarLines = std::abs (barsIn - std::round (barsIn)) * bar.barPpq < PPQ_EPSILON;
 }
 
 void CueEngine::followBar (const BlockTime& time, const BarLayout& bar)
 {
-    if (! onBarLines || nextEvent >= schedule.size)
+    if (nextEvent >= schedule.size)
         return;
 
     // Meters change only at bar lines, so each bar of the cue starts where the planned one ends.

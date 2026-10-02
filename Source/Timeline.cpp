@@ -14,6 +14,7 @@ constexpr int MAX_DENOMINATOR = 32;
 constexpr double PPQ_EPSILON = 1.0e-6;
 constexpr double DISCONTINUITY_SECONDS = 0.005;
 constexpr double CUE_BREAK_PPQ = 0.25;
+constexpr double LATE_NOTE_PPQ = 0.25; // a 16th
 constexpr int COMPOUND_UNITS_PER_BEAT = 3;
 
 bool isValidMeter (int numerator, int denominator)
@@ -98,23 +99,10 @@ BarLayout makeBarLayout (Meter meter, const BeatOptions& options)
     return layout;
 }
 
-double snapToNearestBeat (double ppq, double barStartPpq, const BarLayout& layout)
+double cueStartPpq (double notePpq, double barStartPpq, double barPpq)
 {
-    const double barStart = barStartPpq + std::floor ((ppq - barStartPpq) / layout.barPpq) * layout.barPpq;
-    double best = barStart;
-
-    // Candidates ascend, so `<=` lets the later beat win an exact tie.
-    const auto consider = [&] (double candidate)
-    {
-        if (std::abs (candidate - ppq) <= std::abs (best - ppq))
-            best = candidate;
-    };
-
-    for (int i = 1; i < layout.numBeats; ++i)
-        consider (barStart + layout.beatPpq[(size_t) i]);
-
-    consider (barStart + layout.barPpq);
-    return best;
+    const double sinceBarStart = notePpq - LATE_NOTE_PPQ - barStartPpq;
+    return barStartPpq + std::ceil ((sinceBarStart - PPQ_EPSILON) / barPpq) * barPpq;
 }
 
 void TransportClock::prepare (double newSampleRate)
