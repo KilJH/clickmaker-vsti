@@ -194,6 +194,25 @@ public:
             setParameter (*processor, param::SWING_ON, 0.0f);
             setParameter (*processor, param::CLICK_DECAY, 80.0f);
         }
+
+        beginTest ("A tick level at the bottom turns that tick off: downbeats only");
+        {
+            auto* beatGain = processor->parameters.getParameter (param::BEAT_GAIN);
+            expectEquals (beatGain->getText (0.0f, 0), juce::String ("Off"));
+            expectEquals (beatGain->getValueForText ("Off"), 0.0f);
+            setParameter (*processor, param::BEAT_GAIN, -48.0f);
+
+            Scenario scenario;
+            scenario.lengthPpq = 7.75;
+            const auto result = renderScenario (*processor, scenario);
+            const auto onsets = onsetsOf (result, LEFT);
+
+            expectEquals ((int) onsets.size(), 2);
+            for (size_t bar = 0; bar < onsets.size(); ++bar)
+                expectWithinAbsoluteError (onsets[bar], (int) std::round (result.sampleAtPpq (4.0 * (double) bar)), 2);
+
+            setParameter (*processor, param::BEAT_GAIN, -3.0f);
+        }
     }
 };
 

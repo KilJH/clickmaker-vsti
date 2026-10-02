@@ -140,7 +140,7 @@ ClickMakerEditor::ClickMakerEditor (ClickMakerProcessor& processorToUse)
     {
         caption (toneCaptions[i], toneNames[i]);
         attachSlider (pitches[i], pitchIds[i], " Hz");
-        attachSlider (gains[i], gainIds[i], " dB");
+        attachSlider (gains[i], gainIds[i], ""); // the parameter writes its own unit, or Off
     }
 
     caption (decayCaption, "길이");

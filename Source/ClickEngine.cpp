@@ -173,6 +173,10 @@ void ClickEngine::render (float* bus, int numSamples, std::span<const Tick> tick
 
     for (const auto& tick : ticks)
     {
+        // A tick that is turned off must not cut the one before it.
+        if (sound.tones[(size_t) tick.kind].gain <= 0.0f)
+            continue;
+
         renderVoice (bus, position, tick.sampleOffset);
         position = tick.sampleOffset;
         start (tick.kind, sound);

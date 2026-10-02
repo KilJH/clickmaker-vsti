@@ -19,11 +19,22 @@ constexpr int CUE_CHANNEL = 1;
 constexpr int MAIN_BUS = 0;
 constexpr int CUE_BUS = 1;
 constexpr double BEAT_DISPLAY_EPSILON = 1.0e-6;
+constexpr float MIN_TONE_DB = -48.0f; // the bottom of a tick level turns that tick off
 
 juce::String panToText (float value, int)
 {
     const int percent = juce::roundToInt (std::abs (value) * 100.0f);
     return percent == 0 ? juce::String ("C") : juce::String (value < 0.0f ? "L" : "R") + juce::String (percent);
+}
+
+juce::String toneGainToText (float value, int)
+{
+    return value <= MIN_TONE_DB ? juce::String ("Off") : juce::String (value, 1) + " dB";
+}
+
+float textToToneGain (const juce::String& text)
+{
+    return text.trim().equalsIgnoreCase ("Off") ? MIN_TONE_DB : text.getFloatValue();
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
@@ -51,6 +62,15 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
                                                            NormalisableRange<float> (-1.0f, 1.0f, 0.01f), 0.0f,
                                                            AudioParameterFloatAttributes().withStringFromValueFunction (panToText)));
     };
+    // Off at the bottom, so a click can keep only its downbeats or only its subdivisions.
+    const auto toneGain = [&layout] (const char* id, const char* name, float initial)
+    {
+        layout.add (std::make_unique<AudioParameterFloat> (ParameterID { id, PARAMETER_VERSION }, name,
+                                                           NormalisableRange<float> (MIN_TONE_DB, 0.0f, 0.1f), initial,
+                                                           AudioParameterFloatAttributes()
+                                                               .withStringFromValueFunction (toneGainToText)
+                                                               .withValueFromStringFunction (textToToneGain)));
+    };
     const auto pitchRange = []
     {
         NormalisableRange<float> range (200.0f, 4000.0f, 1.0f);
@@ -70,9 +90,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
     ranged (param::ACCENT_PITCH, "Accent Pitch", pitchRange(), 1600.0f, "Hz");
     ranged (param::BEAT_PITCH, "Beat Pitch", pitchRange(), 1000.0f, "Hz");
     ranged (param::SUB_PITCH, "Sub Pitch", pitchRange(), 800.0f, "Hz");
-    ranged (param::ACCENT_GAIN, "Accent Gain", { -24.0f, 0.0f, 0.1f }, 0.0f, "dB");
-    ranged (param::BEAT_GAIN, "Beat Gain", { -24.0f, 0.0f, 0.1f }, -3.0f, "dB");
-    ranged (param::SUB_GAIN, "Sub Gain", { -24.0f, 0.0f, 0.1f }, -12.0f, "dB");
+    toneGain (param::ACCENT_GAIN, "Accent Gain", 0.0f);
+    toneGain (param::BEAT_GAIN, "Beat Gain", -3.0f);
+    toneGain (param::SUB_GAIN, "Sub Gain", -12.0f);
     ranged (param::CLICK_DECAY, "Click Decay", { 5.0f, 200.0f, 1.0f, 0.5f }, 80.0f, "ms");
     toggle (param::CUE_ON, "Cue On", true);
     ranged (param::CUE_LEVEL, "Cue Level", { -48.0f, 6.0f, 0.1f }, -6.0f, "dB");
@@ -246,6 +266,7 @@ ClickMakerProcessor::BlockSettings ClickMakerProcessor::readBlockSettings() cons
     const auto isOn = [&] (const std::atomic<float>* parameter) { return value (parameter) >= 0.5f; };
     const auto index = [&] (const std::atomic<float>* parameter) { return juce::roundToInt (value (parameter)); };
     const auto gain = [&] (const std::atomic<float>* parameter) { return juce::Decibels::decibelsToGain (value (parameter)); };
+    const auto toneGain = [&] (const std::atomic<float>* parameter) { return juce::Decibels::decibelsToGain (value (parameter), MIN_TONE_DB); };
 
     BlockSettings settings;
     settings.grid = { (GridChoice) index (values.clickGrid), isOn (values.swingOn),
@@ -253,9 +274,9 @@ ClickMakerProcessor::BlockSettings ClickMakerProcessor::readBlockSettings() cons
     settings.compound = isOn (values.compound);
     settings.sound.type = (ClickSoundType) index (values.clickSound);
     settings.sound.decaySeconds = value (values.clickDecay) / 1000.0f;
-    settings.sound.tones[(size_t) TickKind::accent] = { value (values.accentPitch), gain (values.accentGain) };
-    settings.sound.tones[(size_t) TickKind::beat] = { value (values.beatPitch), gain (values.beatGain) };
-    settings.sound.tones[(size_t) TickKind::sub] = { value (values.subPitch), gain (values.subGain) };
+    settings.sound.tones[(size_t) TickKind::accent] = { value (values.accentPitch), toneGain (values.accentGain) };
+    settings.sound.tones[(size_t) TickKind::beat] = { value (values.beatPitch), toneGain (values.beatGain) };
+    settings.sound.tones[(size_t) TickKind::sub] = { value (values.subPitch), toneGain (values.subGain) };
     settings.clickGain = isOn (values.clickOn) ? gain (values.clickLevel) : 0.0f;
     settings.clickPan = value (values.clickPan);
     settings.cueGain = isOn (values.cueOn) ? gain (values.cueLevel) : 0.0f;
