@@ -167,14 +167,13 @@ void ConfigHandoff::publish (std::unique_ptr<EngineConfig> fresh)
 void ConfigHandoff::adoptPending()
 {
     // The previous retiree has not been collected yet; storing over it would leak it.
-    if (retired.load (std::memory_order_acquire) != nullptr)
+    if (retired.load (std::memory_order_acquire) != nullptr || pending.load (std::memory_order_acquire) == nullptr)
         return;
 
-    if (auto* fresh = pending.exchange (nullptr, std::memory_order_acq_rel))
-    {
-        retired.store (active, std::memory_order_release);
-        active = fresh;
-    }
+    // Retire before taking: a publish landing in between then collects this retiree, so a fresh config is
+    // never left pending behind an uncollected one. Only this thread empties `pending`, so it is still set.
+    retired.store (active, std::memory_order_release);
+    active = pending.exchange (nullptr, std::memory_order_acq_rel);
 }
 
 juce::ValueTree wordCacheToTree (const WordCache& cache)
