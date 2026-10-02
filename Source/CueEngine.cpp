@@ -2,13 +2,13 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 namespace clickmaker
 {
 
 namespace
 {
-constexpr double FIT_RATIO = 0.9;               // leave a little air before the next word
 constexpr double MAX_ONSET_LEAD_SECONDS = 0.15;
 constexpr double CHOKE_SECONDS = 0.005;
 constexpr double PPQ_EPSILON = 1.0e-6;
@@ -108,7 +108,7 @@ TakeChoice chooseTake (const WordTakes* takes, double beatPpq, double lengthPpq,
         const double firePpq = std::max (beatPpq - leadPpq, earliestPpq);
         choice = { &take, firePpq };
 
-        const double availableSeconds = (beatPpq + lengthPpq - firePpq) * secondsPerPpq * FIT_RATIO;
+        const double availableSeconds = (beatPpq + lengthPpq - firePpq) * secondsPerPpq;
         if (take.durationSeconds() <= availableSeconds)
             break;
     }
@@ -213,9 +213,7 @@ void CueEngine::render (float* bus, int from, int to, const BlockTime& time, con
 
     while (time.isPlaying && nextEvent < schedule.size)
     {
-        const auto& event = schedule.events[(size_t) nextEvent];
-        const auto* takes = config != nullptr ? config->takesFor (event.wordId) : nullptr;
-        const auto choice = chooseTake (takes, event.ppq, event.lengthPpq, earliestPpq, time.bpm);
+        const auto choice = chooseNextTake (config, time.bpm);
         const double offset = (choice.firePpq - time.ppqStart) / time.ppqPerSample;
 
         if (offset >= to - 0.5)
@@ -233,6 +231,27 @@ void CueEngine::render (float* bus, int from, int to, const BlockTime& time, con
     }
 
     renderVoices (bus, position, to);
+}
+
+TakeChoice CueEngine::chooseNextTake (const EngineConfig* config, double bpm) const
+{
+    // Plans the words left from the last one back: a word starts early by its consonant and chokes the one
+    // before it, so each word has to be over by the time the next one starts.
+    TakeChoice choice;
+    double nextStartPpq = std::numeric_limits<double>::infinity();
+
+    for (int i = schedule.size - 1; i >= nextEvent; --i)
+    {
+        const auto& event = schedule.events[(size_t) i];
+        const auto* takes = config != nullptr ? config->takesFor (event.wordId) : nullptr;
+        const double endPpq = std::min (event.ppq + event.lengthPpq, nextStartPpq);
+        choice = chooseTake (takes, event.ppq, endPpq - event.ppq, earliestPpq, bpm);
+
+        // A word without audio cuts nothing.
+        nextStartPpq = choice.take != nullptr ? choice.firePpq : std::numeric_limits<double>::infinity();
+    }
+
+    return choice;
 }
 
 void CueEngine::startWord (const WordTake& take)

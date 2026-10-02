@@ -45,6 +45,8 @@ struct TakeChoice
     double firePpq = 0.0;
 };
 
+// The slowest take that is over by beatPpq + lengthPpq (else the fastest), started early by its consonant
+// but not before earliestPpq.
 TakeChoice chooseTake (const WordTakes*, double beatPpq, double lengthPpq, double earliestPpq, double bpm);
 
 // Schedules a cue in musical time and plays its words, choking the previous word on each new one.
@@ -72,6 +74,7 @@ private:
     };
 
     void replan (const BlockTime&, const BarLayout&);
+    TakeChoice chooseNextTake (const EngineConfig*, double bpm) const;
     void startWord (const WordTake&);
     void renderVoices (float* bus, int from, int to);
     static void renderVoice (WordVoice&, float* bus, int from, int to);

@@ -68,6 +68,33 @@ bool hasSoundAfter (const RenderResult& result, int channel, int from)
     return result.audio.getMagnitude (channel, from, result.audio.getNumSamples() - from) > 1.0e-6f;
 }
 
+// Words with a long consonant that, like real speech, shortens with the rate. A number's slowest take fits its
+// beat, but the next number starts early by its consonant and would cut it.
+std::optional<RenderedSpeech> longConsonantSpeech (const SpeechRequest& request, const AbortCheck&)
+{
+    constexpr double SAMPLE_RATE = 22050.0;
+    constexpr double PADDING_SECONDS = 0.02;
+    constexpr double CONSONANT_SECONDS = 0.12;
+    constexpr double VOWEL_SECONDS = 0.4;
+    constexpr double CONSONANT_HZ = 6000.0;
+    constexpr double VOWEL_HZ = 400.0;
+
+    const double stretch = DEFAULT_RATE_PERCENT / 100.0 / request.rate;
+    RenderedSpeech speech { {}, SAMPLE_RATE, "fake" };
+
+    const auto append = [&speech] (double seconds, double frequency, float level)
+    {
+        for (int i = 0; i < (int) (seconds * SAMPLE_RATE); ++i)
+            speech.samples.push_back (level * (float) std::sin (juce::MathConstants<double>::twoPi * frequency * i / SAMPLE_RATE));
+    };
+
+    append (PADDING_SECONDS, 0.0, 0.0f);
+    append (CONSONANT_SECONDS * stretch, CONSONANT_HZ, 0.4f);
+    append (VOWEL_SECONDS * stretch, VOWEL_HZ, 0.8f);
+    append (PADDING_SECONDS, 0.0, 0.0f);
+    return speech;
+}
+
 struct SteadyPlayHead final : juce::AudioPlayHead
 {
     PositionInfo info;
@@ -383,6 +410,17 @@ public:
 
             expectEquals ((int) onsetsOf (result, RIGHT).size(), 4);
             expect (onsetsOf (result, LEFT).size() >= 4);
+        }
+
+        beginTest ("A word is fitted to end before the next one starts early on its consonant");
+        {
+            auto slowStart = makeReadyProcessor (longConsonantSpeech);
+            splitChannels (*slowStart);
+
+            Scenario scenario;
+            scenario.lengthPpq = 9.0;
+            scenario.notes = { { 3.75, FIRST_SLOT_NOTE + SLOT_C1 } };
+            expectEquals ((int) onsetsOf (renderScenario (*slowStart, scenario), RIGHT).size(), 4, "a number ran into the next one");
         }
 
         beginTest ("The cue moves to the aux bus when split outputs are on");
