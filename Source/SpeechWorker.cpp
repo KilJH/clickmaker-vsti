@@ -27,6 +27,7 @@ const juce::Identifier GROUPS_PROPERTY ("accentGroups");
 const juce::Identifier INDEX_PROPERTY ("index");
 const juce::Identifier TEXT_PROPERTY ("text");
 const juce::Identifier MODE_PROPERTY ("mode");
+const juce::Identifier NAME_LENGTH_PROPERTY ("nameLength");
 
 juce::String toJuce (const std::string& text)
 {
@@ -102,6 +103,7 @@ juce::ValueTree settingsToTree (const Settings& settings)
         slot.setProperty (INDEX_PROPERTY, i, nullptr);
         slot.setProperty (TEXT_PROPERTY, toJuce (settings.slots[(size_t) i].name), nullptr);
         slot.setProperty (MODE_PROPERTY, (int) settings.slots[(size_t) i].countMode, nullptr);
+        slot.setProperty (NAME_LENGTH_PROPERTY, (int) settings.slots[(size_t) i].nameLength, nullptr);
         tree.appendChild (slot, nullptr);
     }
 
@@ -132,7 +134,8 @@ Settings settingsFromTree (const juce::ValueTree& tree)
         if (child.hasType (SLOT_TYPE) && index >= 0 && index < SLOT_COUNT)
         {
             const int mode = juce::jlimit ((int) CountMode::useDefault, (int) CountMode::twoBars, (int) child[MODE_PROPERTY]);
-            settings.slots[(size_t) index] = { text, (CountMode) mode };
+            const int length = juce::jlimit ((int) NameLength::useDefault, (int) NameLength::twoBeats, (int) child[NAME_LENGTH_PROPERTY]);
+            settings.slots[(size_t) index] = { text, (CountMode) mode, (NameLength) length };
         }
     }
 
@@ -431,6 +434,7 @@ void SpeechWorker::publish()
     {
         const auto& setting = settings.slots[(size_t) slot];
         config->countModes[(size_t) slot] = setting.countMode;
+        config->nameLengths[(size_t) slot] = setting.nameLength;
 
         if (! setting.name.empty())
             config->namedSlots |= 1u << slot;

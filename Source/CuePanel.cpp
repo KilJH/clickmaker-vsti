@@ -17,8 +17,9 @@ constexpr int SHORT_CAPTION_WIDTH = 30;
 constexpr int SPEED_CAPTION_WIDTH = 62;
 constexpr int SPEED_WIDTH = 170;
 constexpr int TOGGLE_WIDTH = 96;
-constexpr int COUNT_WIDTH = 130;
-constexpr int DIRECTION_WIDTH = 140;
+constexpr int COUNT_WIDTH = 120;
+constexpr int DIRECTION_WIDTH = 128;
+constexpr int NAME_LENGTH_CAPTION_WIDTH = 58;
 constexpr int PRESET_WIDTH = 38;
 constexpr int SCROLLBAR_WIDTH = 10;
 constexpr int MAX_COUNT_WORDS_LENGTH = 200;
@@ -65,6 +66,19 @@ int countBarsFor (CountMode mode, int defaultBars)
 
     return defaultBars;
 }
+
+int nameBeatsFor (NameLength length, int defaultBeats)
+{
+    switch (length)
+    {
+        case NameLength::ownBar:     return 0;
+        case NameLength::oneBeat:    return 1;
+        case NameLength::twoBeats:   return 2;
+        case NameLength::useDefault: break;
+    }
+
+    return defaultBeats;
+}
 } // namespace
 
 SettingsSync::SettingsSync (ClickMakerProcessor& processorToUse) : processor (processorToUse)
@@ -107,6 +121,14 @@ public:
         theme::releaseFocusOnReturn (name);
         addAndMakeVisible (name);
 
+        length.addItemList ({ theme::utf8 ("기본"), theme::utf8 ("한 마디"), theme::utf8 ("1박"), theme::utf8 ("2박") }, 1);
+        length.onChange = [this]
+        {
+            owner.sync.edit().slots[(size_t) slot].nameLength = (NameLength) (length.getSelectedId() - 1);
+            owner.sync.push();
+        };
+        addAndMakeVisible (length);
+
         mode.addItemList ({ theme::utf8 ("기본"), theme::utf8 ("이름만"), "4", "8" }, 1);
         mode.onChange = [this]
         {
@@ -131,13 +153,15 @@ public:
         if (! name.hasKeyboardFocus (true))
             name.setText (fromUtf8 (setting.name), juce::dontSendNotification);
 
+        length.setSelectedId ((int) setting.nameLength + 1, juce::dontSendNotification);
         mode.setSelectedId ((int) setting.countMode + 1, juce::dontSendNotification);
     }
 
-    void showStatus (juce::Colour state, int barsBefore)
+    void showStatus (juce::Colour state, int barsBefore, bool nameMeetsCount)
     {
         placement.setText (barsBefore > 0 ? juce::String (barsBefore) + theme::utf8 ("마디 전") : juce::String ("-"),
                            juce::dontSendNotification);
+        length.setEnabled (nameMeetsCount); // the length only places a name relative to a count
 
         if (state != stateColour)
         {
@@ -166,6 +190,7 @@ public:
         dotBounds = area.removeFromRight (DOT_WIDTH);
         placement.setBounds (area.removeFromRight (PLACEMENT_WIDTH));
         mode.setBounds (area.removeFromRight (MODE_WIDTH).reduced (3, 0));
+        length.setBounds (area.removeFromRight (MODE_WIDTH).reduced (3, 0));
         name.setBounds (area);
     }
 
@@ -174,6 +199,7 @@ private:
     const int slot;
     juce::Label note;
     juce::TextEditor name;
+    juce::ComboBox length;
     juce::ComboBox mode;
     juce::Label placement;
     juce::TextButton preview;
@@ -197,6 +223,10 @@ CuePanel::CuePanel (ClickMakerProcessor& processorToUse, SettingsSync& settingsS
     setupCaption (directionCaption, utf8 ("방향"));
     direction.addItemList ({ utf8 ("4 3 2 1 (하행)"), utf8 ("1 2 3 4 (상행)") }, 1);
     directionAttachment = std::make_unique<ComboBoxAttachment> (state, param::COUNT_DIRECTION, direction);
+
+    setupCaption (nameLengthCaption, utf8 ("이름 길이"));
+    nameLength.addItemList ({ utf8 ("한 마디"), utf8 ("1박"), utf8 ("2박") }, 1);
+    nameLengthAttachment = std::make_unique<ComboBoxAttachment> (state, param::NAME_LENGTH, nameLength);
 
     setupCaption (voiceCaption, utf8 ("음성"));
     populateVoices();
@@ -230,6 +260,7 @@ CuePanel::CuePanel (ClickMakerProcessor& processorToUse, SettingsSync& settingsS
 
     setupCaption (noteHeader, utf8 ("노트"));
     setupCaption (nameHeader, utf8 ("이름 (비우면 카운트만)"));
+    setupCaption (lengthHeader, utf8 ("이름 길이"));
     setupCaption (modeHeader, utf8 ("카운트"));
     setupCaption (placementHeader, utf8 ("노트 위치"));
     placementHeader.setJustificationType (juce::Justification::centredRight);
@@ -245,9 +276,10 @@ CuePanel::CuePanel (ClickMakerProcessor& processorToUse, SettingsSync& settingsS
     slotView.setScrollBarThickness (SCROLLBAR_WIDTH);
 
     for (auto* child : std::initializer_list<juce::Component*> {
-             &cueOn, &countCaption, &countLength, &directionCaption, &direction, &voiceCaption, &voice, &speedCaption,
-             &speed, &levelCaption, &level, &panCaption, &pan, &wordsCaption, &countWords, &englishWords, &koreanWords,
-             &noteHeader, &nameHeader, &modeHeader, &placementHeader, &slotView })
+             &cueOn, &countCaption, &countLength, &directionCaption, &direction, &nameLengthCaption, &nameLength,
+             &voiceCaption, &voice, &speedCaption, &speed, &levelCaption, &level, &panCaption, &pan, &wordsCaption,
+             &countWords, &englishWords, &koreanWords, &noteHeader, &nameHeader, &lengthHeader, &modeHeader,
+             &placementHeader, &slotView })
         addAndMakeVisible (child);
 
     showSettings();
@@ -320,6 +352,11 @@ int CuePanel::defaultCountBars() const
     return juce::roundToInt (owner.parameters.getRawParameterValue (param::COUNT_LENGTH)->load()) + 1;
 }
 
+int CuePanel::defaultNameBeats() const
+{
+    return juce::roundToInt (owner.parameters.getRawParameterValue (param::NAME_LENGTH)->load());
+}
+
 void CuePanel::showSettings()
 {
     const auto& settings = sync.current();
@@ -377,6 +414,7 @@ void CuePanel::showStatus (const SpeechStatus& status)
 {
     const auto& settings = sync.current();
     const int defaultBars = defaultCountBars();
+    const int defaultBeats = defaultNameBeats();
 
     // A count-only slot is ready once every number it may speak is ready.
     bool anyFailed = false, anyPending = false, anyReady = false;
@@ -395,9 +433,11 @@ void CuePanel::showStatus (const SpeechStatus& status)
     {
         const auto& setting = settings.slots[(size_t) slot];
         const bool hasName = ! setting.name.empty();
-        const int barsBefore = (hasName ? 1 : 0) + countBarsFor (setting.countMode, defaultBars);
+        const int countBars = countBarsFor (setting.countMode, defaultBars);
+        const bool nameMeetsCount = hasName && countBars > 0;
+        const bool nameBar = hasName && (countBars == 0 || nameBeatsFor (setting.nameLength, defaultBeats) == 0);
         const auto state = hasName ? status.words[(size_t) nameWordId (slot)] : numbers;
-        rows[(size_t) slot]->showStatus (colourFor (state), barsBefore);
+        rows[(size_t) slot]->showStatus (colourFor (state), countBars + (nameBar ? 1 : 0), nameMeetsCount);
     }
 }
 
@@ -423,9 +463,12 @@ void CuePanel::resized()
     cueOn.setBounds (first.removeFromLeft (TOGGLE_WIDTH));
     countCaption.setBounds (first.removeFromLeft (CAPTION_WIDTH));
     countLength.setBounds (first.removeFromLeft (COUNT_WIDTH));
-    first.removeFromLeft (GAP * 2);
+    first.removeFromLeft (GAP + 4);
     directionCaption.setBounds (first.removeFromLeft (SHORT_CAPTION_WIDTH + 6));
     direction.setBounds (first.removeFromLeft (DIRECTION_WIDTH));
+    first.removeFromLeft (GAP + 4);
+    nameLengthCaption.setBounds (first.removeFromLeft (NAME_LENGTH_CAPTION_WIDTH));
+    nameLength.setBounds (first);
 
     auto second = nextRow();
     voiceCaption.setBounds (second.removeFromLeft (CAPTION_WIDTH));
@@ -453,6 +496,7 @@ void CuePanel::resized()
     header.removeFromRight (PREVIEW_WIDTH + DOT_WIDTH + 2);
     placementHeader.setBounds (header.removeFromRight (PLACEMENT_WIDTH));
     modeHeader.setBounds (header.removeFromRight (MODE_WIDTH).withTrimmedLeft (3));
+    lengthHeader.setBounds (header.removeFromRight (MODE_WIDTH).withTrimmedLeft (3));
     nameHeader.setBounds (header);
 
     slotView.setBounds (area);

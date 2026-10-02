@@ -47,6 +47,7 @@ private:
     void countWordsEdited();
     void useCountWords (const std::array<std::string, NUMBER_WORD_COUNT>&);
     int defaultCountBars() const;
+    int defaultNameBeats() const;
 
     ClickMakerProcessor& owner;
     SettingsSync& sync;
@@ -55,6 +56,7 @@ private:
     juce::ToggleButton cueOn;
     juce::ComboBox countLength;
     juce::ComboBox direction;
+    juce::ComboBox nameLength;
     juce::ComboBox voice;
     juce::Slider speed;
     juce::Slider level;
@@ -62,8 +64,8 @@ private:
     juce::TextEditor countWords;
     juce::TextButton englishWords { "EN" };
     juce::TextButton koreanWords;
-    juce::Label countCaption, directionCaption, voiceCaption, speedCaption, levelCaption, panCaption, wordsCaption;
-    juce::Label noteHeader, nameHeader, modeHeader, placementHeader;
+    juce::Label countCaption, directionCaption, nameLengthCaption, voiceCaption, speedCaption, levelCaption, panCaption, wordsCaption;
+    juce::Label noteHeader, nameHeader, lengthHeader, modeHeader, placementHeader;
     juce::Viewport slotView;
     juce::Component slotList;
     std::array<std::unique_ptr<SlotRow>, SLOT_COUNT> rows;
@@ -71,6 +73,7 @@ private:
     std::unique_ptr<ButtonAttachment> cueOnAttachment;
     std::unique_ptr<ComboBoxAttachment> countLengthAttachment;
     std::unique_ptr<ComboBoxAttachment> directionAttachment;
+    std::unique_ptr<ComboBoxAttachment> nameLengthAttachment;
     std::unique_ptr<SliderAttachment> levelAttachment;
     std::unique_ptr<SliderAttachment> panAttachment;
 };

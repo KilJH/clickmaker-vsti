@@ -15,6 +15,7 @@ struct CueShape
     bool hasName = false;
     int countBars = 1; // 0 = name only, 1 = "4", 2 = "8"
     CountDirection direction = CountDirection::down;
+    int nameBeats = 0; // 0: "Chorus | 4 3 2 1"; 1: "Chorus 3 2 1"; 2: "Chorus . 2 1"
 };
 
 struct CueEvent

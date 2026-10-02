@@ -28,28 +28,33 @@ bool sameBeats (const BarLayout& a, const BarLayout& b)
 
 CueSequence buildCueSequence (const BarLayout& bar, int slot, const CueShape& shape)
 {
-    CueSequence sequence;
     const int beats = bar.numBeats;
+    const bool nameBar = shape.hasName && (shape.nameBeats == 0 || shape.countBars == 0);
 
     const auto numberAt = [&] (int index)
     {
         return shape.direction == CountDirection::down ? beats - index : index + 1;
     };
 
-    // Numbers above the spoken range stay silent but keep their place in time.
+    // A name inside the count speaks over its first beats; a one-bar count always keeps its "1".
+    double nameEnd = 0.0;
+
+    if (shape.hasName && ! nameBar)
+    {
+        const int nameBeats = std::min (shape.nameBeats, shape.countBars == 1 ? std::max (1, beats - 1) : beats);
+        nameEnd = nameBeats < beats ? bar.beatPpq[(size_t) nameBeats] : bar.barPpq;
+    }
+
+    CueSequence numbers;
+
+    // Numbers above the spoken range or under the name stay silent but keep their place in time.
     const auto pushNumber = [&] (double ppq, double length, int number)
     {
-        if (number >= 1 && number <= NUMBER_WORD_COUNT)
-            sequence.push ({ ppq, length, numberWordId (number) });
+        if (number >= 1 && number <= NUMBER_WORD_COUNT && ppq >= nameEnd - PPQ_EPSILON)
+            numbers.push ({ ppq, length, numberWordId (number) });
     };
 
-    double start = 0.0;
-
-    if (shape.hasName)
-    {
-        sequence.push ({ 0.0, bar.barPpq, nameWordId (slot) });
-        start = bar.barPpq;
-    }
+    double start = nameBar ? bar.barPpq : 0.0;
 
     if (shape.countBars == 2)
     {
@@ -70,6 +75,20 @@ CueSequence buildCueSequence (const BarLayout& bar, int slot, const CueShape& sh
     if (shape.countBars >= 1)
         for (int i = 0; i < beats; ++i)
             pushNumber (start + bar.beatPpq[(size_t) i], bar.beatEndPpq (i) - bar.beatPpq[(size_t) i], numberAt (i));
+
+    CueSequence sequence;
+
+    // Inside the count, the name may run until the first number left after it.
+    if (shape.hasName)
+    {
+        const double nameLength = nameBar           ? bar.barPpq
+                                : numbers.size > 0 ? numbers.events[0].ppq
+                                                   : shape.countBars * bar.barPpq;
+        sequence.push ({ 0.0, nameLength, nameWordId (slot) });
+    }
+
+    for (int i = 0; i < numbers.size; ++i)
+        sequence.push (numbers.events[(size_t) i]);
 
     return sequence;
 }

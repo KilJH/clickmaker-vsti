@@ -69,6 +69,34 @@ public:
         beginTest ("Name only");
         check (buildCueSequence (fourFour, slot, { true, 0, CountDirection::down }), { { 0, 4, name } });
 
+        beginTest ("A name inside a one-bar count takes its first beat: Chorus 3 2 1");
+        check (buildCueSequence (fourFour, slot, { true, 1, CountDirection::down, 1 }),
+               { { 0, 1, name }, { 1, 1, numberWordId (3) }, { 2, 1, numberWordId (2) }, { 3, 1, numberWordId (1) } });
+
+        beginTest ("A long name can take two beats: Pre-Chorus . 2 1");
+        check (buildCueSequence (fourFour, slot, { true, 1, CountDirection::down, 2 }),
+               { { 0, 2, name }, { 2, 1, numberWordId (2) }, { 3, 1, numberWordId (1) } });
+
+        beginTest ("Counting up, the name stands in for one: Chorus 2 3 4");
+        check (buildCueSequence (fourFour, slot, { true, 1, CountDirection::up, 1 }),
+               { { 0, 1, name }, { 1, 1, numberWordId (2) }, { 2, 1, numberWordId (3) }, { 3, 1, numberWordId (4) } });
+
+        beginTest ("Inside a two-bar count the name opens the lead-in bar: Chorus . 3 . | 4 3 2 1");
+        check (buildCueSequence (fourFour, slot, { true, 2, CountDirection::down, 1 }),
+               { { 0, 2, name }, { 2, 2, numberWordId (3) }, { 4, 1, numberWordId (4) },
+                 { 5, 1, numberWordId (3) }, { 6, 1, numberWordId (2) }, { 7, 1, numberWordId (1) } });
+
+        beginTest ("A one-bar count keeps its last number however long the name is");
+        check (buildCueSequence (makeBarLayout ({ 2, 4 }, {}), slot, { true, 1, CountDirection::down, 2 }),
+               { { 0, 1, name }, { 1, 1, numberWordId (1) } });
+        check (buildCueSequence (makeBarLayout ({ 6, 8 }, {}), slot, { true, 1, CountDirection::down, 1 }),
+               { { 0, 1.5, name }, { 1.5, 1.5, numberWordId (1) } });
+
+        beginTest ("The name length changes nothing without a name or a count");
+        check (buildCueSequence (fourFour, slot, { true, 0, CountDirection::down, 2 }), { { 0, 4, name } });
+        check (buildCueSequence (fourFour, slot, { false, 1, CountDirection::down, 2 }),
+               { { 0, 1, numberWordId (4) }, { 1, 1, numberWordId (3) }, { 2, 1, numberWordId (2) }, { 3, 1, numberWordId (1) } });
+
         beginTest ("3/4 two bars speaks only the downbeat in the lead-in bar");
         check (buildCueSequence (makeBarLayout ({ 3, 4 }, {}), slot, { false, 2, CountDirection::down }),
                { { 0, 3, numberWordId (3) }, { 3, 1, numberWordId (3) }, { 4, 1, numberWordId (2) }, { 5, 1, numberWordId (1) } });

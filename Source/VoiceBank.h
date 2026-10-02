@@ -26,6 +26,7 @@ constexpr int numberWordId (int number) { return number - 1; }
 constexpr int nameWordId (int slot) { return NUMBER_WORD_COUNT + slot; }
 
 enum class CountMode { useDefault, nameOnly, oneBar, twoBars };
+enum class NameLength { useDefault, ownBar, oneBeat, twoBeats };
 
 struct WordTake
 {
@@ -48,6 +49,7 @@ struct EngineConfig
     std::array<std::shared_ptr<const WordTakes>, WORD_COUNT> words;
     std::uint32_t namedSlots = 0;
     std::array<CountMode, SLOT_COUNT> countModes {};
+    std::array<NameLength, SLOT_COUNT> nameLengths {};
     std::vector<GroupPattern> groups;
 
     const WordTakes* takesFor (int wordId) const;

@@ -12,6 +12,7 @@ const juce::Identifier STATE_TYPE ("ClickMakerState");
 const juce::Identifier VERSION_PROPERTY ("version");
 constexpr int STATE_VERSION = 1;
 constexpr int PARAMETER_VERSION = 1;
+constexpr int NAME_LENGTH_VERSION = 2; // Logic recalls AU automation by index, and JUCE orders by version first
 constexpr int MIN_SCRATCH_SAMPLES = 4096;
 constexpr int CLICK_CHANNEL = 0;
 constexpr int CUE_CHANNEL = 1;
@@ -34,9 +35,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
     {
         layout.add (std::make_unique<AudioParameterBool> (ParameterID { id, PARAMETER_VERSION }, name, initial));
     };
-    const auto choice = [&layout] (const char* id, const char* name, const StringArray& options, int initial)
+    const auto choice = [&layout] (const char* id, const char* name, const StringArray& options, int initial,
+                                   int version = PARAMETER_VERSION)
     {
-        layout.add (std::make_unique<AudioParameterChoice> (ParameterID { id, PARAMETER_VERSION }, name, options, initial));
+        layout.add (std::make_unique<AudioParameterChoice> (ParameterID { id, version }, name, options, initial));
     };
     const auto ranged = [&layout] (const char* id, const char* name, NormalisableRange<float> range, float initial, const char* unit)
     {
@@ -77,6 +79,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
     pan (param::CUE_PAN, "Cue Pan");
     choice (param::COUNT_LENGTH, "Count Length", { "4 (1 bar)", "8 (2 bars)" }, 0);
     choice (param::COUNT_DIRECTION, "Count Direction", { "Down 4 3 2 1", "Up 1 2 3 4" }, 0);
+    choice (param::NAME_LENGTH, "Name Length", { "Own Bar", "1 Beat", "2 Beats" }, 0, NAME_LENGTH_VERSION);
     toggle (param::CUE_TO_AUX, "Cue To Aux Out", false);
     return layout;
 }
@@ -112,6 +115,7 @@ ClickMakerProcessor::ClickMakerProcessor (SpeechRenderer renderer)
     values.cuePan = raw (param::CUE_PAN);
     values.countLength = raw (param::COUNT_LENGTH);
     values.countDirection = raw (param::COUNT_DIRECTION);
+    values.nameLength = raw (param::NAME_LENGTH);
     values.cueToAux = raw (param::CUE_TO_AUX);
 }
 
@@ -258,6 +262,7 @@ ClickMakerProcessor::BlockSettings ClickMakerProcessor::readBlockSettings() cons
     settings.cuePan = value (values.cuePan);
     settings.defaultCountBars = index (values.countLength) + 1;
     settings.direction = (CountDirection) index (values.countDirection);
+    settings.defaultNameBeats = index (values.nameLength); // choices are 0, 1 and 2 beats
     settings.cueToAux = isOn (values.cueToAux);
     return settings;
 }
@@ -270,8 +275,14 @@ CueShape ClickMakerProcessor::shapeFor (int slot, const EngineConfig* config, co
                    : mode == CountMode::twoBars  ? 2
                                                  : settings.defaultCountBars;
 
+    const auto length = config != nullptr ? config->nameLengths[(size_t) slot] : NameLength::useDefault;
+    const int nameBeats = length == NameLength::ownBar   ? 0
+                        : length == NameLength::oneBeat  ? 1
+                        : length == NameLength::twoBeats ? 2
+                                                         : settings.defaultNameBeats;
+
     // Whether a slot has a name comes from its text, so a failed render never shifts the timing.
-    return { config != nullptr && config->hasName (slot), bars, settings.direction };
+    return { config != nullptr && config->hasName (slot), bars, settings.direction, nameBeats };
 }
 
 ClickMakerProcessor::StereoGain ClickMakerProcessor::panGains (float gain, float pan)

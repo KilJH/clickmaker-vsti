@@ -7,7 +7,7 @@ namespace clickmaker
 
 namespace
 {
-constexpr int EDITOR_WIDTH = 1000;
+constexpr int EDITOR_WIDTH = 1060;
 constexpr int EDITOR_HEIGHT = 660;
 constexpr int MARGIN = 12;
 constexpr int HEADER_HEIGHT = 48;

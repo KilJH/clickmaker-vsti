@@ -23,6 +23,7 @@ struct SlotSetting
 {
     std::string name;
     CountMode countMode = CountMode::useDefault;
+    NameLength nameLength = NameLength::useDefault;
 
     bool operator== (const SlotSetting&) const = default;
 };

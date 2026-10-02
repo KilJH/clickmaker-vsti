@@ -275,6 +275,37 @@ public:
             setParameter (*processor, param::COUNT_DIRECTION, 0.0f);
         }
 
+        beginTest ("A name can share its bar with the count: Pre-Chorus 3 2 1");
+        {
+            setParameter (*processor, param::NAME_LENGTH, 1.0f);
+
+            Scenario scenario;
+            scenario.lengthPpq = 12.5;
+            scenario.notes = { { 4.0, FIRST_SLOT_NOTE + SLOT_F1 } };
+            const auto result = renderScenario (*processor, scenario);
+            const auto onsets = onsetsOf (result, RIGHT);
+            const std::array<const char*, 3> words { "Three", "Two", "One" };
+
+            expectEquals ((int) onsets.size(), 4);
+            for (size_t k = 0; k < words.size() && k + 1 < onsets.size(); ++k)
+                expectWithinAbsoluteError ((double) onsets[k + 1],
+                                           expectedWordOnset (result, 5.0 + (double) k, 4.0, fakeTake (words[k], 0.5f), 120.0),
+                                           (double) TIMING_TOLERANCE);
+            expect (! hasSoundAfter (result, RIGHT, (int) result.sampleAtPpq (8.0)), "the cue ran past its bar");
+
+            // A slot can still give its name a bar of its own: Pre-Chorus | 4 3 2 1.
+            auto settings = processor->settings();
+            settings.slots[SLOT_F1].nameLength = NameLength::ownBar;
+            processor->setSettings (settings);
+            expect (waitUntil ([&] { return processor->speechStatus().complete; }, WORKER_TIMEOUT_MS));
+            expectEquals ((int) onsetsOf (renderScenario (*processor, scenario), RIGHT).size(), 5);
+
+            settings.slots[SLOT_F1].nameLength = NameLength::useDefault;
+            processor->setSettings (settings);
+            expect (waitUntil ([&] { return processor->speechStatus().complete; }, WORKER_TIMEOUT_MS));
+            setParameter (*processor, param::NAME_LENGTH, 0.0f);
+        }
+
         beginTest ("A fast tempo plays a faster take");
         {
             const auto wordLength = [&] (double bpm)
@@ -375,6 +406,7 @@ public:
 
         auto settings = original->settings();
         settings.slots[SLOT_C1].name = "Count In";
+        settings.slots[SLOT_C1].nameLength = NameLength::oneBeat;
         settings.slots[SLOT_F1].countMode = CountMode::nameOnly;
         settings.accentGroups = "2+2+3";
         original->setSettings (settings);

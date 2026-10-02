@@ -106,15 +106,21 @@ void renderCues (const std::string& voiceId)
               << juce::String ((juce::Time::getMillisecondCounterHiRes() - started) / 1000.0, 1) << " s: "
               << status.wordsReady << "/" << status.wordsTotal << " ready, " << status.wordsFailed << " failed\n";
 
-    for (const double bpm : { 120.0, 200.0 })
+    // Own-bar names, then names inside the count ("Pre-Chorus 3 2 1"), where long names meet fast tempos.
+    for (const int nameBeats : { 0, 1 })
     {
-        test::Scenario scenario;
-        scenario.name = "real_cue_" + juce::String ((int) bpm);
-        scenario.bpmAt = [bpm] (double) { return bpm; };
-        scenario.lengthPpq = 22.0;
-        scenario.notes = { { 0.0, FIRST_SLOT_NOTE + 0 }, { 8.0, FIRST_SLOT_NOTE + 5 }, { 16.0, FIRST_SLOT_NOTE + 7 } };
-        test::renderScenario (processor, scenario);
-        std::cout << "wrote " << CLICKMAKER_TEST_OUTPUT_DIR << "/" << scenario.name << ".wav\n";
+        test::setParameter (processor, param::NAME_LENGTH, (float) nameBeats);
+
+        for (const double bpm : { 120.0, 200.0 })
+        {
+            test::Scenario scenario;
+            scenario.name = juce::String (nameBeats == 0 ? "real_cue_" : "real_cue_inline_") + juce::String ((int) bpm);
+            scenario.bpmAt = [bpm] (double) { return bpm; };
+            scenario.lengthPpq = 22.0;
+            scenario.notes = { { 0.0, FIRST_SLOT_NOTE + 0 }, { 8.0, FIRST_SLOT_NOTE + 5 }, { 16.0, FIRST_SLOT_NOTE + 7 } };
+            test::renderScenario (processor, scenario);
+            std::cout << "wrote " << CLICKMAKER_TEST_OUTPUT_DIR << "/" << scenario.name << ".wav\n";
+        }
     }
 }
 

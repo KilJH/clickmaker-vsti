@@ -25,6 +25,7 @@ inline constexpr const char* CUE_LEVEL = "cue_level";
 inline constexpr const char* CUE_PAN = "cue_pan";
 inline constexpr const char* COUNT_LENGTH = "count_length";
 inline constexpr const char* COUNT_DIRECTION = "count_direction";
+inline constexpr const char* NAME_LENGTH = "name_length";
 inline constexpr const char* CUE_TO_AUX = "cue_to_aux";
 
 } // namespace clickmaker::param

@@ -73,6 +73,7 @@ private:
         float cuePan = 0.0f;
         int defaultCountBars = 1;
         CountDirection direction = CountDirection::down;
+        int defaultNameBeats = 0;
         bool cueToAux = false;
     };
 
@@ -99,6 +100,7 @@ private:
         std::atomic<float>* cuePan = nullptr;
         std::atomic<float>* countLength = nullptr;
         std::atomic<float>* countDirection = nullptr;
+        std::atomic<float>* nameLength = nullptr;
         std::atomic<float>* cueToAux = nullptr;
     };
 
